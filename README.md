@@ -9,8 +9,8 @@
 ## conda环境配置
 
 ```bash
-git clone https://github.com/Vision-CAIR/MiniGPT-4.git
-cd MiniGPT-4
+git clone https://github.com/RukawaY/MiniGPT4-Finetuning.git
+cd MiniGPT4-Finetuning
 conda env create -f environment.yml
 conda activate minigptv
 ```
