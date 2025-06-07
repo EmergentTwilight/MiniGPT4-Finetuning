@@ -77,7 +77,7 @@ python prepare_flickr30k.py
 
 确保：
 - `minigpt4_flickr_finetune.yaml`文件中`model.ckpt` 的值是预训练MiniGPT-4 7B模型 (`prerained_minigpt4_7b.pth`) 的正确路径。
-- `minigpt4_flickr_finetune.yaml`文件中`datasets.flickr30k_grounded_detail.build_info` 中的 `ann_path` 和 `image_path` 指向了正确的数据集路径（推荐使用绝对路径）。
+- `finetune.yaml`文件中`datasets.flickr30k_grounded_detail.build_info` 中的 `ann_path` 和 `image_path` 指向了正确的数据集路径（推荐使用绝对路径）。
 
 **3. 开始训练**
 
