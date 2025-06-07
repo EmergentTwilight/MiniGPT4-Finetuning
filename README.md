@@ -53,6 +53,42 @@ cd flickr30k
 git lfs pull
 ```
 
-## 训练
+## 基于Flickr30k数据集的指令微调
+
+在Flickr30k数据集上进行指令微调，主要训练连接视觉模块和语言模型的线性映射层。可以运行`finetuning.py`脚本查看如何运行。
+
+```bash
+python finetuning.py
+```
+
+**1. 准备数据集**
+
+首先，确保按照“下载微调数据集”部分的说明，下载了Flickr30k数据集。然后在 `MiniGPT4-Finetuning` 根目录下运行数据准备脚本，以生成训练所需的注解文件：
+
+```bash
+python prepare_flickr30k.py
+```
+
+该脚本会在 `flickr30k` 目录下生成一个 `flickr30k_grounded_detail.json` 文件。
+
+**2. 检查配置文件**
+
+已经准备好了Flickr30k微调的配置文件。在开始训练前，请打开并检查 `train_configs/minigpt4_flickr_finetune.yaml` 文件和`minigpt4/configs/datasets/flickr30k/finetune.yaml`文件。
+
+确保：
+- `minigpt4_flickr_finetune.yaml`文件中`model.ckpt` 的值是预训练MiniGPT-4 7B模型 (`prerained_minigpt4_7b.pth`) 的正确路径。
+- `minigpt4_flickr_finetune.yaml`文件中`datasets.flickr30k_grounded_detail.build_info` 中的 `ann_path` 和 `image_path` 指向了正确的数据集路径（推荐使用绝对路径）。
+
+**3. 开始训练**
+
+确认数据集和配置无误后，即可开始微调。运行以下命令将使用单个GPU开始训练。如果有多张GPU，可以修改 `nproc-per-node` 的值。
+
+```bash
+torchrun --nproc-per-node 1 train.py --cfg-path train_configs/minigpt4_flickr_finetune.yaml
+```
+
+训练完成后，微调模型的检查点将保存在配置文件中 `output_dir` 指定的目录下（默认为 `output/minigpt4_flickr_finetune`）。
 
 ## 评估
+
+TODO

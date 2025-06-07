@@ -317,11 +317,11 @@ class GQABuilder(BaseDatasetBuilder):
 
 
 
-@registry.register_builder("flickr_grounded_caption")
+@registry.register_builder("grounded_caption")
 class GroundedCaptionBuilder(BaseDatasetBuilder):
     train_dataset_cls = GroundedDetailDataset
     DATASET_CONFIG_DICT = {
-        "default": "configs/datasets/flickr/default.yaml",
+        "default": "configs/datasets/vg/grounded_caption.yaml",
     }
 
     def build_datasets(self):
@@ -530,6 +530,58 @@ class CCSBUAlignBuilder(BaseDatasetBuilder):
             text_processor=self.text_processors["train"],
             ann_paths=[os.path.join(storage_path, 'filter_cap.json')],
             vis_root=os.path.join(storage_path, 'image'),
+        )
+
+        return datasets
+
+
+@registry.register_builder("flickr30k_grounded_detail")
+class FlickrGroundedDetailBuilder(BaseDatasetBuilder):
+    train_dataset_cls = GroundedDetailDataset
+    DATASET_CONFIG_DICT = {
+        "default": "configs/datasets/flickr30k/finetune.yaml",
+    }
+
+    def build_datasets(self):
+        # at this point, all the annotations and image/videos should be all downloaded to the specified locations.
+        logging.info("Building datasets...")
+        self.build_processors()
+        build_info = self.config.build_info
+        datasets = dict()
+
+        # create datasets
+        dataset_cls = self.train_dataset_cls
+        datasets['train'] = dataset_cls(
+            vis_processor=self.vis_processors["train"],
+            text_processor=self.text_processors["train"],
+            ann_path=build_info.ann_path,
+            vis_root=build_info.image_path,
+        )
+
+        return datasets
+
+
+@registry.register_builder("caption_to_phrase")
+class CaptionToPhraseBuilder(BaseDatasetBuilder):
+    train_dataset_cls = CaptionToObjectDataset
+    DATASET_CONFIG_DICT = {
+        "default": "configs/datasets/flickr/caption_to_phrase.yaml",
+    }
+
+    def build_datasets(self):
+        # at this point, all the annotations and image/videos should be all downloaded to the specified locations.
+        logging.info("Building datasets...")
+        self.build_processors()
+        build_info = self.config.build_info
+        datasets = dict()
+
+        # create datasets
+        dataset_cls = self.train_dataset_cls
+        datasets['train'] = dataset_cls(
+            vis_processor=self.vis_processors["train"],
+            text_processor=self.text_processors["train"],
+            ann_path=build_info.ann_path,
+            vis_root=build_info.image_path,
         )
 
         return datasets
