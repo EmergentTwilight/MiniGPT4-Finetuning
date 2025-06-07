@@ -1,0 +1,6 @@
+datasets:
+  flickr30k_grounded_detail:
+    data_type: images
+    build_info:
+      ann_path: "/mnt/data4/home/ziyuan/MiniGPT4-Finetuning/flickr30k/flickr30k_grounded_detail.json"
+      image_path: "/mnt/data4/home/ziyuan/MiniGPT4-Finetuning/flickr30k/flickr30k-images" 

@@ -183,7 +183,7 @@ dataset/Evaluation.md
 jupyter_notebook.slurm
 
 # datasets
-flickr30k/
+/flickr30k/
 
 # checkpoints
 prerained_minigpt4_7b.pth
