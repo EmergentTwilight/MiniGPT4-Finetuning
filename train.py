@@ -90,6 +90,10 @@ def main():
     datasets = task.build_datasets(cfg)
     model = task.build_model(cfg)
 
+    if cfg.run_cfg.distributed:
+        model = model.to(cfg.run_cfg.gpu)
+        model = torch.nn.parallel.DistributedDataParallel(model, device_ids=[cfg.run_cfg.gpu])
+
     if cfg.run_cfg.wandb_log:
         wandb.login()
         wandb.init(project="minigptv", name=cfg.run_cfg.job_name)

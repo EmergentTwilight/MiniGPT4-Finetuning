@@ -11,7 +11,7 @@ model:
 
 datasets:
   flickr30k_grounded_detail:
-    batch_size: 8
+    batch_size: 2
     vis_processor:
       train:
         name: "blip2_image_train"
