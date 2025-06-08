@@ -87,7 +87,7 @@ python prepare_flickr30k.py
 torchrun --nproc-per-node 1 train.py --cfg-path train_configs/minigpt4_flickr_finetune.yaml
 ```
 
-训练完成后，微调模型的检查点将保存在配置文件中 `output_dir` 指定的目录下（默认为 `output/minigpt4_flickr_finetune`）。
+训练完成后，微调模型的检查点将保存在配置文件中 `output_dir` 指定的目录下（默认为 `minigpt4/output/minigpt4_flickr_finetune`）。
 
 ## 评估
 
