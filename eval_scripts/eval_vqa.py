@@ -2,6 +2,7 @@ import os
 import re
 import json
 import argparse
+import random
 from collections import defaultdict
 
 import numpy as np
@@ -10,6 +11,8 @@ from tqdm import tqdm
 import torch
 from torch.utils.data import DataLoader
 from datasets import load_dataset
+from sentence_transformers import SentenceTransformer
+from torch.nn.functional import cosine_similarity
 
 
 from minigpt4.datasets.datasets.vqa_datasets import OKVQAEvalData,VizWizEvalData,IconQAEvalData,GQAEvalData,VSREvalData,HMEvalData
@@ -24,18 +27,47 @@ from minigpt4.common.config import Config
 def list_of_str(arg):
     return list(map(str, arg.split(',')))
 
+def post_handle(answer):
+    answer = answer.lower()
+
+    print(f"Original answer: {answer}")
+
+    if '### assistant:' in answer:
+        answer = answer.split('### assistant:')[-1].strip()
+    
+    if '[/inst]' in answer:
+        answer = answer.split('[/inst]')[-1].strip()
+
+    answer = answer.replace('<unk>', '')
+    answer = re.sub(r'\[.*?\]', '', answer)
+    answer = re.sub(r'<.*?>', '', answer)
+    answer = re.sub(r'based on the image, respond with a short answer:', '', answer)
+    answer = re.sub(r'based on the image, respond to this question with a short answer:', '', answer)
+
+    answer = answer.strip()
+
+    parts = re.split(r'[\n.?!]', answer)
+    if parts:
+        answer = parts[0].strip()
+
+    if '###' in answer:
+        answer = answer.split('###')[0].strip()
+
+    return answer.strip() 
+
 parser = eval_parser()
 parser.add_argument("--dataset", type=list_of_str, default='refcoco', help="dataset to evaluate")
+parser.add_argument("--save_path", type=str, help="path to save the evaluation results")
 args = parser.parse_args()
 cfg = Config(args)
 
 
-
+similarity_model = SentenceTransformer('all-MiniLM-L6-v2').to('cuda:0')
 model, vis_processor = init_model(args)
 conv_temp = CONV_VISION_minigptv2.copy()
 conv_temp.system = ""
 model.eval()
-save_path = cfg.run_cfg.save_path
+save_path = args.save_path
 
 
 if 'okvqa' in args.dataset:
@@ -151,24 +183,44 @@ if 'gqa' in args.dataset:
     max_new_tokens = cfg.evaluation_datasets_cfg["gqa"]["max_new_tokens"]
 
     gqa = json.load(open(eval_file_path))
+    random.shuffle(gqa)
+    gqa = gqa[:len(gqa) // 10]
     data = GQAEvalData(gqa, vis_processor, img_path)
     eval_dataloader = DataLoader(data, batch_size=batch_size, shuffle=False)
     count=0
     total=0
     minigpt4_predict = []
+    semantic_similarities = []
     for images, texts, labels in tqdm(eval_dataloader):
         texts = prepare_texts(texts, conv_temp)  # warp the texts with conversation template
         answers = model.generate(images, texts, max_new_tokens=max_new_tokens, do_sample=False)
 
         for answer, label in zip(answers, labels):
             result = dict()
-            result['pred'] = answer.lower().replace('<unk>','').strip()
+            answer = post_handle(answer)
+            result['pred'] = answer
             result['gt'] = label
-            minigpt4_predict.append(result)
-            if answer.lower() == label:
+            print(f"Label: {label}")
+            print(f"Answer: {answer}")
+
+            embeddings = similarity_model.encode([answer, label], convert_to_tensor=True)
+            similarity = cosine_similarity(embeddings[0].unsqueeze(0), embeddings[1].unsqueeze(0)).item()
+            semantic_similarities.append(similarity)
+            print(f"Semantic Similarity: {similarity:.4f}")
+
+            if label in answer.lower():
                 count+=1
             total+=1
-    print('gqa val:', count / total * 100, flush=True)
+            print(f'Current gqa accuracy: {count / total * 100}\n')
+
+            result['similarity'] = similarity
+            minigpt4_predict.append(result)
+    
+    avg_similarity = np.mean(semantic_similarities)
+    print('-'*60)
+    print(f'GQA Average Semantic Similarity: {avg_similarity:.4f}', flush=True)
+    print(f'Average gqa val score:', count / total * 100, flush=True)
+    print('-'*60)
 
     file_save_path = os.path.join(save_path, "gqa.json")
     with open(file_save_path,'w') as f:

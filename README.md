@@ -91,4 +91,10 @@ torchrun --nproc-per-node 1 train.py --cfg-path train_configs/minigpt4_flickr_fi
 
 ## 评估
 
-TODO
+参考[EVAL_README.md](./eval_scripts/EVAL_README.md)进行评估。
+
+如果想要一次评估多个模型，可以参考[evaluate.sh](./evaluate.sh)。
+
+```bash
+bash evaluate.sh
+```

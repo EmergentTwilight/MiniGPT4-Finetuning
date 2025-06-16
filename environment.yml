@@ -34,3 +34,4 @@ dependencies:
     - visual-genome
     - wandb
     - datasets
+    - sentence-transformers

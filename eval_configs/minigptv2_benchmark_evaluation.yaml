@@ -1,12 +1,11 @@
 model:
   arch: minigpt4
   model_type: pretrain_vicuna0
-  max_txt_len: 160
-  end_sym: "###"
+  max_txt_len: 500
+  end_sym: "</s>"
   low_resource: True
-  prompt_template: '###Human: {} ###Assistant: '
+  prompt_template: '[INST] {} [/INST]'
   llama_model: /mnt/data4/home/ziyuan/MiniGPT4-Finetuning/vicuna-7b
-  ckpt: /mnt/data4/home/ziyuan/MiniGPT4-Finetuning/minigpt4/output/minigpt4_flickr_finetune/20250608110/checkpoint_4.pth
   lora_r: 64
   lora_alpha: 16
 
@@ -16,7 +15,7 @@ datasets:
     vis_processor:
       train:
         name: "blip2_image_eval"
-        image_size: 448
+        image_size: 224
     text_processor:
       train:
         name: "blip_caption"
@@ -38,10 +37,10 @@ evaluation_datasets:
   #   max_new_tokens: 20
   #   batch_size: 10
   gqa:
-    eval_file_path: /path/to/eval/annotation/path  
-    img_path: /path/to/eval/image/path    
-    max_new_tokens: 20
-    batch_size: 10
+    eval_file_path: /mnt/data4/home/ziyuan/eval_gqa_dataset/testdev_balanced_questions.json
+    img_path: /mnt/data4/home/ziyuan/eval_gqa_dataset/gqa_images   
+    max_new_tokens: 200
+    batch_size: 40
   # okvqa:
   #   eval_file_path: /path/to/eval/annotation/path  
   #   img_path: /path/to/eval/image/path     
@@ -71,7 +70,6 @@ evaluation_datasets:
 run:
   task: image_text_pretrain
   name: minigpt4_evaluation
-  save_path: /path/to/save/folder_path
 
   
 
