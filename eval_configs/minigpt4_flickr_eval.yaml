@@ -25,8 +25,8 @@ evaluation_datasets:
   flickr30k:
     eval_file_path: /mnt/data4/home/ziyuan/MiniGPT4-Finetuning/flickr30k/flickr30k_grounded_detail.json
     img_path: /mnt/data4/home/ziyuan/MiniGPT4-Finetuning/flickr30k/flickr30k-images
-    max_new_tokens: 60
-    batch_size: 16
+    max_new_tokens: 180
+    batch_size: 32
 
 run:
   task: image_text_pretrain

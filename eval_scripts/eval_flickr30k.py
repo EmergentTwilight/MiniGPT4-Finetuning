@@ -2,6 +2,7 @@ import os
 import json
 import argparse
 import re
+import random
 from PIL import Image
 from tqdm import tqdm
 import torch
@@ -72,6 +73,34 @@ def convert_to_coco_format(annotations):
         "licenses": [],
     }
 
+def post_handle(captions):
+    for i in range(len(captions)):
+        caption = captions[i]
+        if '### Assistant:' in caption:
+            caption = caption.split('### Assistant:')[-1].strip()
+        
+        if '[INST] <Img>' in caption:
+            caption = caption.split('[INST] <Img>')[-1].strip()
+        
+        if '[INST] [Img]' in caption:
+            caption = caption.split('[INST] [Img]')[-1].strip()
+
+        if '[INST] [Image]' in caption:
+            caption = caption.split('[INST] [Image]')[-1].strip()
+
+        if '[INST] <p>' in caption:
+            caption = caption.split('[INST] <p>')[-1].strip()
+
+        if '<DESC>' in caption:
+            caption = caption.split('<DESC>')[-1].strip()
+        
+        if '[INST]' in caption:
+            caption = caption.split('[INST]')[-1].strip()
+
+        captions[i] = caption.strip()
+    
+    return captions
+
 
 def main():
     parser = eval_parser()
@@ -95,7 +124,10 @@ def main():
 
     with open(eval_file_path) as f:
         annotations = json.load(f)
-    
+
+    random.shuffle(annotations)
+    annotations = annotations[:len(annotations) // 20]
+
     # Convert original annotations to COCO format for ground truth
     coco_formatted_gt = convert_to_coco_format(annotations)
     
@@ -108,6 +140,7 @@ def main():
     dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=False)
 
     results = []
+    current_sample_idx = 0
     for batch in tqdm(dataloader, desc="Evaluating Batches"):
         images = batch["image"].to(model.device)
         prompts = batch["prompt"]
@@ -117,9 +150,14 @@ def main():
         
         with torch.no_grad():
             captions = model.generate(images, texts, max_new_tokens=max_new_tokens, do_sample=False)
+        captions = post_handle(captions)
         
         for i in range(len(captions)):
             results.append({"image_id": image_ids[i].item(), "caption": captions[i]})
+            print("Model Output: ", captions[i])
+            print("Ground Truth: ", annotations[current_sample_idx]['grounded_caption'])
+            print("-" * 100)
+            current_sample_idx += 1
 
     # Save results to a temporary file
     temp_res_file = tempfile.NamedTemporaryFile(mode='w', delete=False, dir=save_path, suffix=".json")
