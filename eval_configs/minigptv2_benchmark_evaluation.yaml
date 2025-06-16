@@ -1,0 +1,79 @@
+model:
+  arch: minigpt4
+  model_type: pretrain_vicuna0
+  max_txt_len: 160
+  end_sym: "###"
+  low_resource: True
+  prompt_template: '###Human: {} ###Assistant: '
+  llama_model: /mnt/data4/home/ziyuan/MiniGPT4-Finetuning/vicuna-7b
+  ckpt: /mnt/data4/home/ziyuan/MiniGPT4-Finetuning/minigpt4/output/minigpt4_flickr_finetune/20250608110/checkpoint_4.pth
+  lora_r: 64
+  lora_alpha: 16
+
+
+datasets:
+  cc_sbu_align:
+    vis_processor:
+      train:
+        name: "blip2_image_eval"
+        image_size: 448
+    text_processor:
+      train:
+        name: "blip_caption"
+
+evaluation_datasets:
+  # refcoco:
+  #   eval_file_path: /path/to/eval/annotation/path  
+  #   img_path: /path/to/eval/image/path      
+  #   max_new_tokens: 20
+  #   batch_size: 10
+  # refcocog:
+  #   eval_file_path: /path/to/eval/annotation/path  
+  #   img_path: /path/to/eval/image/path    
+  #   max_new_tokens: 20
+  #   batch_size: 10
+  # refcoco+:
+  #   eval_file_path: /path/to/eval/annotation/path  
+  #   img_path: /path/to/eval/image/path    
+  #   max_new_tokens: 20
+  #   batch_size: 10
+  gqa:
+    eval_file_path: /path/to/eval/annotation/path  
+    img_path: /path/to/eval/image/path    
+    max_new_tokens: 20
+    batch_size: 10
+  # okvqa:
+  #   eval_file_path: /path/to/eval/annotation/path  
+  #   img_path: /path/to/eval/image/path     
+  #   max_new_tokens: 20
+  #   batch_size: 10
+  # vizwiz:
+  #   eval_file_path: /path/to/eval/annotation/path  
+  #   img_path: /path/to/eval/image/path    
+  #   max_new_tokens: 20
+  #   batch_size: 10
+  # iconvqa:
+  #   eval_file_path: /path/to/eval/annotation/path  
+  #   img_path: /path/to/eval/image/path    
+  #   max_new_tokens: 20
+  #   batch_size: 10
+  # vsr:
+  #   eval_file_path: cambridgeltl/vsr_zeroshot 
+  #   img_path: /path/to/eval/image/path    
+  #   max_new_tokens: 20
+  #   batch_size: 10
+  # hm:
+  #   eval_file_path: /path/to/eval/annotation/path  
+  #   img_path: /path/to/eval/image/path 
+  #   max_new_tokens: 20
+  #   batch_size: 100
+
+run:
+  task: image_text_pretrain
+  name: minigpt4_evaluation
+  save_path: /path/to/save/folder_path
+
+  
+
+  
+
