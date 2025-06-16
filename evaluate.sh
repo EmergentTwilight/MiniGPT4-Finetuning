@@ -10,9 +10,8 @@ trained_path=(
 export PYTHONPATH=$PYTHONPATH:/mnt/data4/home/ziyuan/MiniGPT4-Finetuning
 
 echo "Evaluating pretrained model..."
-proxy torchrun --master-port 3456 --nproc_per_node 1 eval_scripts/eval_vqa.py \
-    --cfg-path /mnt/data4/home/ziyuan/MiniGPT4-Finetuning/eval_configs/minigptv2_benchmark_evaluation.yaml \
-    --dataset gqa \
+proxy torchrun --master-port 3456 --nproc_per_node 1 eval_scripts/eval_flickr30k.py \
+    --cfg-path /mnt/data4/home/ziyuan/MiniGPT4-Finetuning/eval_configs/minigpt4_flickr_eval.yaml \
     --ckpt "${before_trained_path}" \
     --save_path /mnt/data4/home/ziyuan/eval_output/pretrained
 
@@ -20,9 +19,8 @@ proxy torchrun --master-port 3456 --nproc_per_node 1 eval_scripts/eval_vqa.py \
 echo "Evaluating fine-tuned model..."
 for path in "${trained_path[@]}"; do
     echo "Evaluating ${path}"
-    proxy torchrun --master-port 3456 --nproc_per_node 1 eval_scripts/eval_vqa.py \
-        --cfg-path /mnt/data4/home/ziyuan/MiniGPT4-Finetuning/eval_configs/minigptv2_benchmark_evaluation.yaml \
-        --dataset gqa \
+    proxy torchrun --master-port 3456 --nproc_per_node 1 eval_scripts/eval_flickr30k.py \
+        --cfg-path /mnt/data4/home/ziyuan/MiniGPT4-Finetuning/eval_configs/minigpt4_flickr_eval.yaml \
         --ckpt "$path" \
         --save_path /mnt/data4/home/ziyuan/eval_output/finetuned_${path}
 done

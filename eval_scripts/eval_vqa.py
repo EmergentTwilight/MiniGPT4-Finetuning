@@ -33,25 +33,39 @@ def post_handle(answer):
     print(f"Original answer: {answer}")
 
     if '### assistant:' in answer:
-        answer = answer.split('### assistant:')[-1].strip()
+        assistant_parts = answer.split('### assistant:')
+        answer = ''
+        for part in assistant_parts:
+            if part.strip() != '':
+                answer += part.split('###')[0].strip() + '. '
+        answer = answer.strip()
     
     if '[/inst]' in answer:
         answer = answer.split('[/inst]')[-1].strip()
+
+    if '[/instructions]' in answer:
+        answer = answer.split('[/instructions]')[-1].strip()
+
+    if '[/vqa]' in answer:
+        answer = answer.split('[/vqa]')[-1].strip()
+
+    if '(less than 10 words):' in answer:
+        answer = answer.split('(less than 10 words):')[-1].strip()
 
     answer = answer.replace('<unk>', '')
     answer = re.sub(r'\[.*?\]', '', answer)
     answer = re.sub(r'<.*?>', '', answer)
     answer = re.sub(r'based on the image, respond with a short answer:', '', answer)
     answer = re.sub(r'based on the image, respond to this question with a short answer:', '', answer)
+    answer = re.sub(r'based on the image, respond', '', answer)
 
     answer = answer.strip()
 
     parts = re.split(r'[\n.?!]', answer)
-    if parts:
-        answer = parts[0].strip()
-
-    if '###' in answer:
-        answer = answer.split('###')[0].strip()
+    answer = ''
+    for part in parts:
+        if part.strip() != '':
+            answer += part.strip() + '. '
 
     return answer.strip() 
 
@@ -192,8 +206,8 @@ if 'gqa' in args.dataset:
     minigpt4_predict = []
     semantic_similarities = []
     for images, texts, labels in tqdm(eval_dataloader):
-        texts = prepare_texts(texts, conv_temp)  # warp the texts with conversation template
-        answers = model.generate(images, texts, max_new_tokens=max_new_tokens, do_sample=False)
+        texts = prepare_texts(texts, conv_temp, "<Img><ImageHere></Img> Based on the image, respond with a short answer (less than 10 words): {}")
+        answers = model.generate(images, texts, max_new_tokens=max_new_tokens, do_sample=False, temperature=0.2, repetition_penalty=1.3)
 
         for answer, label in zip(answers, labels):
             result = dict()

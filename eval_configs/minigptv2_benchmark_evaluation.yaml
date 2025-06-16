@@ -39,8 +39,8 @@ evaluation_datasets:
   gqa:
     eval_file_path: /mnt/data4/home/ziyuan/eval_gqa_dataset/testdev_balanced_questions.json
     img_path: /mnt/data4/home/ziyuan/eval_gqa_dataset/gqa_images   
-    max_new_tokens: 200
-    batch_size: 40
+    max_new_tokens: 120
+    batch_size: 16
   # okvqa:
   #   eval_file_path: /path/to/eval/annotation/path  
   #   img_path: /path/to/eval/image/path     

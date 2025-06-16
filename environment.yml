@@ -35,3 +35,6 @@ dependencies:
     - wandb
     - datasets
     - sentence-transformers
+    - nltk
+    - rouge-score
+    - pycocoevalcap
