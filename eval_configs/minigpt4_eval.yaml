@@ -5,7 +5,7 @@ model:
   end_sym: "###"
   low_resource: True
   prompt_template: '###Human: {} ###Assistant: '
-  ckpt: '/mnt/data4/home/ziyuan/MiniGPT4-Finetuning/prerained_minigpt4_7b.pth'
+  ckpt: /mnt/data4/home/ziyuan/MiniGPT4-Finetuning/minigpt4/output/minigpt4_flickr_finetune/20250608122/checkpoint_9.pth
 
 
 datasets:
