@@ -10,6 +10,8 @@ from torch.utils.data import DataLoader, Dataset
 from pycocotools.coco import COCO
 from pycocoevalcap.eval import COCOEvalCap
 import tempfile
+import nltk
+from pycocoevalcap.tokenizer import ptbtokenizer
 
 from minigpt4.common.eval_utils import prepare_texts, init_model, eval_parser
 from minigpt4.conversation.conversation import CONV_VISION_minigptv2
@@ -39,6 +41,23 @@ class Flickr30kEvalDataset(Dataset):
             "image_id": int(image_id_str),
             "prompt": self.prompt,
         }
+
+class PythonTokenizer:
+    """
+    Wrapper for NLTK's TreebankWordTokenizer.
+    """
+    def __init__(self):
+        self.tokenizer = nltk.tokenize.TreebankWordTokenizer()
+
+    def tokenize(self, captions_for_image):
+        tokenized_captions = {}
+        for image_id, captions in captions_for_image.items():
+            tokenized_captions[image_id] = [
+                ' '.join(self.tokenizer.tokenize(c['caption'].lower()))
+                for c in captions
+            ]
+        return tokenized_captions
+
 
 def convert_to_coco_format(annotations):
     coco_images = []
@@ -172,6 +191,9 @@ def main():
     
     # Create COCOEvalCap object
     coco_eval = COCOEvalCap(coco_gt, coco_res)
+
+    # Use Python-based tokenizer
+    coco_eval.tokenizer = PythonTokenizer()
     
     # Evaluate
     coco_eval.evaluate()
