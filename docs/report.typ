@@ -16,7 +16,7 @@
 )
 
 
-= 1. 摘要
+= 1. Abstract
 
 MiniGPT4-Finetuning 项目旨在基于视觉语言模型 MiniGPT-4@zhu2023minigpt4enhancingvisionlanguageunderstanding，对 #strong[Flickr30k]@young2014image 数据集开展指令微调，以增强图像-文本理解与生成能力。本文档总结了项目背景、环境配置、模型下载、微调流程、评估结果与未来工作等内容，为后续复现与迭代提供参考。
 
@@ -44,7 +44,7 @@ MiniGPT-4 通过结合视觉编码器与 Vicuna 语言模型，实现了图像�
 具体来说，假设我们有一个预训练模型 $f_theta$，输入为图像 $I$ 和文本指令 $x$，输出为文本 $y$。指令微调的目标是最小化如下损失函数：
 
 $
-cal(L)(theta) = limits(bb(E))_((I,x,y) tilde cal(D))[-log P_theta (y|I, x)]
+  cal(L)(theta) = limits(bb(E))_((I,x,y) tilde cal(D))[-log P_theta (y|I, x)]
 $
 
 其中 $cal(D)$ 表示带有指令的训练数据集。
@@ -98,19 +98,75 @@ ROUGE-L (Recall-Oriented Understudy for Gisting Evaluation - Longest Common Subs
 - 对句子结构敏感
 - 分数范围从0到1
 
+这些指标能够从不同角度（n-gram匹配、语义共识、结构相似性）衡量模型生成描述的质量。
 
 == 技术细节
 
 === 转换数据集
 
-我们使用 `prepare_flickr30k.py` 脚本将 Flickr30k 数据集转换为适合指令微调的格式。该脚本读取原始的 `flickr_annotations_30k.csv` 文件，并生成一个 JSON 文件。对于每一个样本，我们将其 5 个参考描述（`caption` 列表）用空格连接起来，并和其对应的图像 ID 一起存储在 JSON 文件中。
+本项目使用Flickr30k数据集进行模型的指令微调。Flickr30k是一个广泛使用的图像描述数据集，包含约3万张从Flickr收集的图片，每张图片通常附有5条由人工标注的英文描述。
+
+为了适配模型的训练需求，我们对原始Flickr30k数据集的标注文件进行了预处理。具体步骤如下，由 `prepare_flickr30k.py` 脚本实现：
+
+1. *输入：*脚本读取位于 `flickr30k/flickr_annotations_30k.csv` 的原始标注文件。
+2. *核心处理逻辑：*
+  - 脚本遍历CSV文件中的每一行。
+  - 对于每张图片，它会解析 `raw` 字段中包含的JSON格式的多条人工标注描述。
+  - *关键步骤：*为了给模型提供更丰富的上下文信息，脚本将一张图片对应的所有（通常是5条）描述文本*拼接成一个单一的、更长的字符串，作为该图片的“基准详细描述” (`grounded_caption`)* 。
+  - 在处理过程中，脚本会检查对应的图像文件是否存在于 `flickr30k/flickr30k-images/` 目录下，若图像文件缺失，则跳过该条标注。
+3. *输出：*预处理完成后，脚本会生成一个名为 `flickr30k/flickr30k_grounded_detail.json` 的JSON文件。该文件包含了所有有效图片的 `image_id` 及其对应的拼接后的 `grounded_caption`。该JSON文件将直接作为模型微调的输入。\ 例如，JSON文件中的一个条目格式如下：
+  ```json
+  {
+    "image_id": "1000092795",
+    "grounded_caption": "A man in a blue shirt is standing on a ladder cleaning a window. A man on a ladder cleans the window of a tall building. A man on a ladder outside a building cleaning windows. A man on a ladder washes windows on a building. A man on a scaffold outside a building washes a window."
+  }
+  ```
+  该预处理脚本使用了tqdm库来可视化处理进度。
 
 
-=== 定义测评指标
+=== 实验流程
 
-我们使用上述 BLEU、CIDEr 和 ROUGE-L 等指标评估模型性能。
+实验的整体流程遵循标准的深度学习模型训练范式，具体步骤由train.py脚本执行，并通过finetuning.py中的指导命令进行调用：
 
-在自定义的 `eval_scripts/eval_flickr30k.py` 中，我们利用 `COCO API` 实现了上述评估指标的计算。
+1. *环境与参数初始化：*
+  - 根据 `run_cfg` 配置初始化分布式环境（如果使用多GPU，本项目主要针对单GPU微调连接层）。
+  - 使用 `setup_seeds(cfg)` 设置全局随机种子以确保实验的可复现性。
+  - 使用 `setup_logger()` 配置日志记录。
+  - 打印配置文件 `cfg` 内容。
+2. *任务、数据集与模型构建：*
+  - 通过 `tasks.setup_task(cfg)` 设置具体的微调任务。
+  - 调用 `task.build_datasets(cfg)` 加载预处理后的Flickr30k数据集（即 `flickr30k_grounded_detail.json`）。
+  - 通过 `task.build_model(cfg)` 构建MiniGPT-4模型，此步骤会加载指定的预训练模型权重（`ckpt`）和LLM（`llama_model`）。
+3. *模型并行化：*
+  - 如果配置为分布式训练，模型会被包装在 `torch.nn.parallel.DistributedDataParallel` 中。
+4. *实验跟踪（Wandb）：*
+  - 如果 `cfg.run_cfg.wandb_log` 为 `true`，则初始化wandb，并使用 `wandb.watch(model)` 监控模型梯度和参数。
+5. *训练器初始化与执行：*
+  - 通过 `get_runner_class(cfg)` 获取指定的训练器类（通常为 `runner_base`）。
+  - 初始化训练器实例：`runner = RunnerClass(cfg=cfg, job_id=job_id, task=task, model=model, datasets=datasets)`。
+  - 调用 `runner.train()` 开始模型的训练过程。训练日志和模型检查点会保存在 `output_dir` 指定的目录中。
+
+=== 评估方法与解码策略
+
+模型性能的评估通过 `evaluate.sh` 脚本统一调度。该脚本首先评估原始预训练模型 (`prerained_minigpt4_7b.pth`) 作为基线，随后迭代评估微调过程中保存的各个模型检查点（epoch 0 至 epoch 4）。
+
+评估的核心命令格式如下（以预训练模型为例）：
+
+```bash
+proxy torchrun --master-port 3456 --nproc_per_node 1 eval_scripts/eval_flickr30k.py \
+    --cfg-path eval_configs/minigpt4_flickr_eval.yaml \
+    --ckpt path/to/model_checkpoint.pth \
+    --save_path path/to/eval_output
+```
+
+其中：
+
+- `eval_scripts/eval_flickr30k.py`：执行评估逻辑，加载模型，生成描述并计算BLEU、CIDEr、ROUGE-L等指标。
+- `eval_configs/minigpt4_flickr_eval.yaml`：定义评估所需的配置，包括数据集路径和可能的解码参数。
+- `--ckpt`：指定当前评估使用的模型权重。
+- `--save_path`：存储评估结果和生成的描述。
+
+解码策略（如束搜索宽度 `num_beams`、温度系数 `temperature`）对生成结果质量有重要影响。这些参数在上述 `minigpt4_flickr_eval.yaml` 配置文件中设定，或存在默认值。为保证评估的公平性和可比性，预训练和各微调检查点均采用统一的解码设置进行评估。
 
 
 = 4. Experiment Results
@@ -212,12 +268,12 @@ bash evaluate.sh
     [epoch3], [0.3878], [0.3314], [0.2978], [0.2688], [0.4907], [0.6701],
     [epoch4], [*0.3912*], [*0.3375*], [*0.3005*], [*0.2807*], [*0.5115*], [*0.6803*],
     table.hline(stroke: 1pt),
-  )
+  ),
 )
 
 #figure(
   caption: [模型评估结果折线图],
-  image("../eval_result/metric_trends.png", width: 80%)
+  image("../eval_result/metric_trends.png", width: 80%),
 )
 
 
@@ -245,6 +301,21 @@ bash evaluate.sh
 - 探索更大的语言模型后端。
 - 优化推理速度与显存占用。
 
+#pagebreak()
+
+= 附录
+
+#figure(
+  caption: [贡献度百分比],
+  table(
+    columns: 2,
+    [夏子渊], [20%],
+    [金裕涵], [20%],
+    [林滨], [20%],
+    [程韬], [20%],
+    [潘越], [20%],
+  ),
+)
 
 #bibliography("ref.bib", title: [References])
 
